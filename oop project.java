@@ -1,95 +1,191 @@
-// Ye project Electric Fan ka hai jisme OOP concepts use kiye gaye hain
-
 class ElectricAppliance {
-    String brand;
-    int voltage;
+    private String brand;
+    private int voltage;
 
-    void on() {
-        System.out.println("Appliance chalu hogaya");
+    public void setBrand(String brand) {
+        this.brand = brand;
     }
 
-    void off() {
-        System.out.println("Appliance band hogaya");
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setVoltage(int voltage) {
+        this.voltage = voltage;
+    }
+
+    public int getVoltage() {
+        return voltage;
+    }
+
+    public void on() {
+        System.out.println("Appliance is on");
+    }
+
+    public void off() {
+        System.out.println("Appliance is off");
     }
 }
 
-// Composition: Fan ke andar Motor hai
 class Motor {
-    void start() {
-        System.out.println("Motor ghoom rahi hai");
+    public void start() {
+        System.out.println("Motor is running");
     }
 }
 
-// Inheritance: Fan ElectricAppliance ka child hai
 class ElectricFan extends ElectricAppliance {
-    int speed;
-    Motor motor = new Motor(); // Composition
+    private int speed;
+    private final int MAX_SPEED = 5;
+    private final Motor motor = new Motor();
+    private boolean isSwinging = false;
+    private int timerInSeconds = 0;
+    private boolean isOn = false;
 
-    void setSpeed(int s) {
-        speed = s;
-        System.out.println("Fan ki speed set hui: " + speed);
+    public void setSpeed(int speed) {
+        if (speed >= 1 && speed <= MAX_SPEED) {
+            this.speed = speed;
+            System.out.println("Fan speed set to: " + speed);
+        } else {
+            System.out.println("Speed must be between 1 and 5.");
+        }
     }
 
-    void startFan() {
-        on();
+    public int getSpeed() {
+        return speed;
+    }
+
+    public void enableSwing(boolean swing) {
+        this.isSwinging = swing;
+        System.out.println("Swing mode: " + (swing ? "ON" : "OFF"));
+    }
+
+    public boolean isSwinging() {
+        return isSwinging;
+    }
+
+    public void setTimer(int seconds) {
+        this.timerInSeconds = seconds;
+        System.out.println("Fan timer set: " + seconds + " seconds");
+    }
+
+    public int getTimer() {
+        return timerInSeconds;
+    }
+
+    public boolean isOn() {
+        return isOn;
+    }
+
+    public void startFan() {
+        if (!isOn) {
+            on();
+            isOn = true;
+        }
         motor.start();
-        System.out.println("Fan chal gaya");
+        System.out.println("Fan is running");
+    }
+
+    public void stopFan() {
+        isOn = false;
+        off();
+    }
+
+    public void decreaseTimer() {
+        if (timerInSeconds > 0) {
+            timerInSeconds--;
+        }
+    }
+
+    public void displayStatus() {
+        System.out.println("======== Fan Status ========");
+        System.out.println("Brand: " + getBrand());
+        System.out.println("Voltage: " + getVoltage() + "V");
+        System.out.println("Fan is " + (isOn ? "ON" : "OFF"));
+        System.out.println("Speed: " + speed);
+        System.out.println("Swing Mode: " + (isSwinging ? "ON" : "OFF"));
+        System.out.println("Timer: " + (timerInSeconds > 0 ? timerInSeconds + "s left" : "Off"));
+        System.out.println("============================");
     }
 }
 
-// Aggregation: Remote fan ko control karta hai (ek alag class hai)
 class Remote {
-    void speedUp(ElectricFan fan) {
-        fan.setSpeed(fan.speed + 1);
+    public void speedUp(ElectricFan fan) {
+        fan.setSpeed(fan.getSpeed() + 1);
     }
 
-    void turnOffFan(ElectricFan fan) {
-        fan.off();
+    public void turnOffFan(ElectricFan fan) {
+        fan.stopFan();
+    }
+
+    public void turnOnFan(ElectricFan fan) {
+        fan.startFan();
+    }
+
+    public void toggleSwing(ElectricFan fan) {
+        fan.enableSwing(!fan.isSwinging());
+    }
+
+    public void setTimer(ElectricFan fan, int seconds) {
+        fan.setTimer(seconds);
+    }
+
+    public void showStatus(ElectricFan fan) {
+        fan.displayStatus();
     }
 }
 
-// Threading: Fan jab chalta hai to background mein loop chalega
 class FanThread extends Thread {
-    ElectricFan fan;
+    private final ElectricFan fan;
 
-    FanThread(ElectricFan f) {
-        fan = f;
+    public FanThread(ElectricFan fan) {
+        this.fan = fan;
     }
 
     public void run() {
         while (!isInterrupted()) {
-            System.out.println("Fan speed: " + fan.speed + " (chal raha hai)");
+            if (fan.isOn()) {
+                fan.displayStatus();
+                if (fan.getTimer() > 0) {
+                    fan.decreaseTimer();
+                    if (fan.getTimer() == 0) {
+                        System.out.println("Timer ended: Fan is turning off");
+                        fan.stopFan();
+                    }
+                }
+            }
             try {
-                Thread.sleep(2000);
+                Thread.sleep(1000); // 1 second update interval
             } catch (InterruptedException e) {
                 break;
             }
         }
-        System.out.println("Fan band hogaya (Thread se)");
+        System.out.println("Fan turned off (from thread)");
     }
 }
 
-// Main class (Program yahan se start hota hai)
 public class Main {
     public static void main(String[] args) {
         ElectricFan myFan = new ElectricFan();
-        myFan.brand = "PakFan";
-        myFan.voltage = 220;
-        myFan.setSpeed(1);
+        myFan.setBrand("PakFan");
+        myFan.setVoltage(220);
+        myFan.setSpeed(2);
 
         Remote remote = new Remote();
+        remote.turnOnFan(myFan);
+        remote.setTimer(myFan, 5); // Auto stop in 5 seconds
+        remote.toggleSwing(myFan);
         remote.speedUp(myFan);
 
         FanThread fanThread = new FanThread(myFan);
         fanThread.start();
 
         try {
-            Thread.sleep(7000); // 7 second fan chalega
+            Thread.sleep(8000); // Let fan run for 8 seconds
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        fanThread.interrupt(); // Fan band karna
+        fanThread.interrupt(); // Stop the thread
         remote.turnOffFan(myFan);
     }
 }
